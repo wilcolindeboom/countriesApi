@@ -13,6 +13,8 @@ const searchButton = document.getElementById("searchButton");
 
 const countryField = document.getElementById("country");
 
+const infopanel = document.getElementById("infopanel");
+
 // console.log(searchButton);
 
 async function fetchData (country) {
@@ -24,14 +26,30 @@ async function fetchData (country) {
         console.log(buildStringCapitalInfo (result.data[0]));
         console.log(buildStringValutaInfo (result.data[0]));
         console.log(buildStringLanguageInfo (result.data[0]));
-
+        buildInfoPanel(result.data[0]);
     } catch (e) {
         console.error(e);
     }
 }
-// default = belgium
+
+//     Er moet alleen een request gedaan worden als de gebruiker op enter drukt, of op de zoek-knop klikt.
 searchButton.addEventListener("click",() => {
-    fetchData(countryName())});
+    fetchData(countrySearchName())});
+
+// 8. Maak een inputveld op de pagina en zorg ervoor dat als de gebruiker op enter drukt, de functie wordt
+// aangeroepen waarmee de gegevens over `België` worden opgehaald.
+
+countryField.addEventListener("keydown",(e) => {
+    if (e.key === "Enter") {
+        fetchData(countrySearchName());
+// 10. Zorg ervoor dat de waarde van het input veld wordt leeggemaakt na elke zoekopdracht.
+        countryField.value = "";
+
+    } else {
+        // console.log("key pressed: "+e.key);
+    };
+});
+
 
 //     Maak op basis van de response de volgende string en log dit in de console: [country-naam] is situated in [subarea-name]. It has a population of [amount] people.
 
@@ -49,6 +67,30 @@ function buildStringCapitalInfo(data) {
     return capitalInfo;
 }
 
+function getValuta(data) {
+    const {currencies} = data;
+    let valuta = '';
+    switch(currencies.length) {
+        case 1 :
+            valuta = `${currencies[0].name}'s`;
+            break;
+        case 2 :
+            valuta = `${currencies[0].name}'s and ${currencies[1].name}'s`;
+            break;
+        default :
+            valuta = 'unknown valuta!';
+    }
+
+    return valuta;
+}
+
+function buildStringCapitalCurrencyInfo(data) {
+    const {capital} = data;
+    const valuta = getValuta(data);
+    const capitalInfo = `The capital is ${capital} and you can pay with ${valuta}.`;
+    return capitalInfo;
+}
+
 // Maak een functie die ongeacht het aantal currencies die in een land gebruikt worden, een string maakt.
 // In een land kunnen één of twee currencies gebruikt worden:
 //   1 valuta: and you can pay with [currency]'s
@@ -56,32 +98,28 @@ function buildStringCapitalInfo(data) {
 
 
 function buildStringValutaInfo(data) {
-    const {currencies} = data;
+    const valuta = getValuta(data);
     let valutaInfo = '';
-    switch(currencies.length) {
-        case 1 :
-            valutaInfo = ` 1 valuta: and you can pay with ${currencies[0].name}'s`;
-            break;
-        case 2 :
-            valutaInfo = ` 2 valuta's: and you can pay with ${currencies[0].name}'s and ${currencies[1].name}'s`;
-            break;
-        default :
-            valutaInfo = 'Valuta unknown!';
+    if(valuta.includes("and")) {
+        return ` 2 valuta's: and you can pay with ${valuta}`;
+    } else {
+        return ` 1 valuta: and you can pay with ${valuta}`;
     }
-
-    return valutaInfo;
 }
 
-// Check of alles nog steeds werkt als je de gegevens over Aruba of Duitsland ophaalt!
 
-function countryName() {
+// 9. Zorg ervoor dat de waarde uit het input veld wordt gebruikt als query voor het GET request.
+
+function countrySearchName() {
     if(!countryField.value) {
-        return 'belgium';
+        return 'belgium';  // default Belgium
     } else {
         return countryField.value;
     }
 }
- // vul aruba of germany in het tekstveld in en klik op zoek...
+
+// Check of alles nog steeds werkt als je de gegevens over Aruba of Duitsland ophaalt!
+// -> vul aruba of germany in het tekstveld in en klik op zoek of enter
 
 
 //
@@ -111,3 +149,76 @@ function buildStringLanguageInfo(data) {
 
     return languageInfo;
 }
+
+// 7. Zorg ervoor dat de opgehaalde data op de volgende manier wordt toegevoegd aan de DOM:
+
+function getFlagImage(data) {
+    const {flag} = data;
+    return flag;
+}
+
+function getCountryName(data) {
+    const {name} = data;
+    return name;
+}
+
+
+function buildInfoPanel(data) {
+
+    // 11. Zorg ervoor dat er altijd maar één zoekresultaat op de pagina staat.
+
+    while (infopanel.hasChildNodes()) {
+        infopanel.removeChild(infopanel.firstChild);
+    }
+
+    // [IMAGE: flag]
+    const flagImage = document.createElement("img");
+    flagImage.setAttribute("src", getFlagImage(data));
+    flagImage.setAttribute("alt", "country flag");
+    infopanel.appendChild(flagImage);
+
+    // [country-name]
+    const countryName = document.createElement("p");
+    countryName.setAttribute("id", "countryName");
+    countryName.textContent = getCountryName(data);
+    infopanel.appendChild(countryName);
+
+    // [country-naam] is situated in [subarea-name]. It has a population of [amount] people.
+    const countryInfo = document.createElement("p");
+    countryInfo.setAttribute("id", "countryInfo");
+    countryInfo.textContent = buildStringCountryInfo(data);
+    infopanel.appendChild(countryInfo);
+
+    // The capital is [city] and you can pay with [currency]'s
+    const capitalCurrencyInfo = document.createElement("p");
+    capitalCurrencyInfo.setAttribute("id", "capitalCurrencyInfo");
+    capitalCurrencyInfo.textContent = buildStringCapitalCurrencyInfo(data);
+    infopanel.appendChild(capitalCurrencyInfo);
+
+    // They speak [language], [language] and [language]
+    const languageInfo = document.createElement("p");
+    languageInfo.setAttribute("id", "capitalCurrencyInfo");
+    languageInfo.textContent = buildStringLanguageInfo(data)
+    infopanel.appendChild(languageInfo);
+}
+
+
+
+//
+// 12. Zorg ervoor dat als er naar een land wordt gezocht dat niet bestaat, er een foutmelding in de DOM wordt gezet.
+//     _Tip:_ als er een ongeldige API call wordt gemaakt, zal de response in het `catch` blok terecht komen.
+//
+// 13. Zorg ervoor dat als je na een ongeldige API call weer een geldige API call maakt, de foutmelding verdwenen is.
+//
+// 14. **Bonusopdracht:** make it look nice! 😍
+
+
+
+
+
+
+
+
+
+
+
